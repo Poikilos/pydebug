@@ -34,7 +34,6 @@ import bdb
 import tkinter
 import sys
 import os
-import string
 import regex
 
 def atoi(s):
@@ -407,7 +406,7 @@ class Show:
         self.activeBox = self
         idx = self.nbox.listbox.curselection()[0]
         sel = self.nbox.listbox.get(idx)
-        pos = string.find(sel," = ")
+        pos = sel.find(" = ")
         if pos > 0:
             sel = sel[:pos]
         #
@@ -594,7 +593,6 @@ class SourceText:
             self.text.text.insert(tkinter.END, self.file)
             return
 
-        from string import expandtabs
         file = open(self.file)
         lines = file.readlines()
         file.close()
@@ -615,7 +613,7 @@ class SourceText:
                 mkBreak = 1
             else:
                 mkBreak = 0
-            line = "....  " + repr(lno) + ': ' + expandtabs(lines[lno-1])
+            line = "....  " + repr(lno) + ': ' + lines[lno-1].expandtabs()
             l_stti(tkinter.END, line)
             if mkBreak:
                 tag = 'break_%d' % (lno)
@@ -652,7 +650,7 @@ class SourceText:
     def set_break_event(self, event):
         self.text.text.configure(state="normal")
         idx = self.text.text.index("current")
-        lineno = atoi(string.splitfields(idx,".")[0])
+        lineno = atoi(idx.split(".")[0])
         tag_name = "break_%d" % lineno
         try:
             cond = self.debugger.cbreaks[self.file,lineno]
@@ -678,7 +676,7 @@ class SourceText:
     def set_cond_break_event(self, event):
         self.text.text.configure(state="normal")
         idx = self.text.text.index("current")
-        lineno = atoi(string.splitfields(idx,".")[0])
+        lineno = atoi(idx.split(".")[0])
         tag_name = "break_%d" % lineno
         if self.debugger.get_break(self.file,lineno):
             self.debugger.clear_break(self.file, lineno)
@@ -827,8 +825,10 @@ class VarsDialog:
         index = self.vars.listbox.index('@%d,%d' % (event.x, event.y))
         vname = self.vars.listbox.get(index)
         try:
-            vname = string.split(vname," = ")[0]
-        except:
+            vname = vname.split(" = ")[0]
+            if len(vname) == 1:
+                raise ValueError
+        except ValueError:
             print("no ' = ' found")
             return
         #
@@ -949,7 +949,6 @@ class StackDialog:
             pass
 
     def select_command(self, *args):
-        from string import atoi
         i = self.stack_box.listbox.index("active")
         self.debugger.show_frame(self.debugger.stack[i][0])
 
@@ -984,7 +983,7 @@ class StackDialog:
         self.debugger.helpStackWindow()
 
     def update(self):
-        import linecache, string, os
+        import linecache, os
         self.stack_box.listbox.delete(0, 'end')
 
         try:
@@ -1013,7 +1012,7 @@ class StackDialog:
                 #
                 line = linecache.getline(filename, lineno)
                 if line:
-                    s = s + ': ' + string.strip(line)
+                    s = s + ': ' + line.strip()
                 #
                 self.stack_box.listbox.insert('end', s)
             #
@@ -1060,7 +1059,6 @@ class FunctionDialog:
             pass
 
     def select_command(self, *args):
-        from string import atol,split
         idx = self.function_box.listbox.curselection()[0]
         sel = self.function_box.listbox.get(idx)
         slist = split(sel," : ")
@@ -1259,7 +1257,7 @@ class HelpDialog:
         lab.pack(side = "top",fill="both")
         self.text = ScrolledText(self.toplevel)
         # text analyse
-        xl = string.split(text,"\012")
+        xl = text.split("\012")
         maxx = 0
         for x in xl:
             lll = len(x)
@@ -1639,7 +1637,7 @@ class Debugger(bdb.Bdb):
         for k in list(sh.keys()):
             bplist = sh[k]
             for lno in bplist:
-                ln,cond = string.split(lno,"#")
+                ln, cond = lno.split("#")
                 if len(cond) == 0:
                     cond = None
                 self.set_break(k,atoi(ln),cond)
@@ -1993,7 +1991,7 @@ can hand "theGlobals" and "theLocals" to PyDebug.
             idx1,idx2 = text.tag_ranges("sel")
             svar = None
             if idx1 and idx2:
-                svar = string.strip(text.get(idx1,idx2))
+                svar = text.get(idx1, idx2).strip()
         except:
             svar = None
         #
@@ -2213,15 +2211,21 @@ can hand "theGlobals" and "theLocals" to PyDebug.
         except:
             return env
 
+        lineN = 0
         for line in lines:
-            line = string.strip(line)
+            lineN += 1  # Counting numbers start at 1.
+            line = line.strip()
             if line[-1] == '\n':
                 line = line[:-1]
             x = re.search(line)
+            if x is None:
+                print("{}:{}: WARNING: There is no valid '=' pattern."
+                      "".format(fname, lineN))
+                continue
             if x < 0:
                 continue
-            left = string.lower(string.strip(re.group(1)))
-            rig = string.strip(re.group(2))
+            left = re.group(1).strip().lower()
+            rig = re.group(2).strip()
             if left in Debugger.ekeys:
                 env[left] = rig
             #
@@ -2335,8 +2339,8 @@ can hand "theGlobals" and "theLocals" to PyDebug.
         self.re_eval(line)
 
     def re_eval(self, line):
-        import sys, string
-        line = string.strip(line)
+        # import sys
+        line = line.strip()
         if line[:1] == '!': line = line[1:]
         theLocals = self.curframe.f_locals
         theGlobals = self.curframe.f_globals
@@ -2385,7 +2389,7 @@ can hand "theGlobals" and "theLocals" to PyDebug.
         ret = split(sel," : ")
         try:
             fname = ret[0]
-            lno = string.atol(ret[1])
+            lno = atol(ret[1])
             x = self.clear_break(fname,lno)
             # print x
             self.bwin.listbox.delete("active")

@@ -6,6 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ## [1.5.5] - 2020-03-22
+### Fixed
+- Fix more Python 1 code :(
+  - Remove uses of the `string` module.
+    - Change `splitfields(s, ...)` to `s.split(...)` (identical according to <https://docs.python.org/2/library/string.html#string.splitfields>).
+  - Raise an exception other code expects Python split to raise when there is no " = " in one case.
+  - Fix comparison of `x` (from `x = re.search(line)`) to an int: Add a check for `None`.
+  - Change `from string import expandtabs`; `expandtabs(s)` to `s.expandtabs()`.
+
+## [1.5.5] - 2020-03-22
 (Poikilos; based on the upstream version 1.5.4: The wayback machine copy from https://web.archive.org/web/20040331032128/home.t-online.de/home/Ulrich.Herold/pydebug.py internally dated "1997/1998")
 
 ### Added
