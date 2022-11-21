@@ -2624,7 +2624,6 @@ if __name__ == '__main__':
     if not sys.argv[1:]:
         print("Filename is missing")
         raise SystemExit
-    #
 
     filename = sys.argv[1]  # Get script filename
 
